@@ -43,10 +43,10 @@
     };
 
     /*****************
-    *     Config     *
-    *****************/
+     *     Config     *
+     *****************/
 
-    // Mode
+        // Mode
 
     let safeMode = false;
     let nextEncounterTime = Number(localStorage.getItem('nextEncounter'));
@@ -84,8 +84,17 @@
         monsterId = Number(localStorage.getItem('monsterId'));
     };
 
-    // Dungeon
-    
+    // Dungeon attacked
+    let dungeonAttacked = false;
+    if (localStorage.getItem('dungeonAttacked')) {
+        dungeonAttacked = localStorage.getItem('dungeonAttacked') === "true" ? true : false;
+    };
+    // Dungeon lost
+    let dungeonLost = false;
+    if (localStorage.getItem('dungeonLost')) {
+        dungeonLost = localStorage.getItem('dungeonLost') === "true" ? true : false;
+    };
+
     let doDungeon = true;
     if (localStorage.getItem('doDungeon')) {
         doDungeon = localStorage.getItem('doDungeon') === "true" ? true : false;
@@ -132,7 +141,7 @@
     if (!document.getElementById("submenu2").getElementsByClassName("menuitem glow")[0]){
         doEventExpedition = false;
     };
-    
+
     let eventMonsterId = 0;
     if (localStorage.getItem('eventMonsterId')) {
         eventMonsterId = Number(localStorage.getItem('eventMonsterId'));
@@ -153,8 +162,8 @@
     };
 
     /*****************
-    *  Translations  *
-    *****************/
+     *  Translations  *
+     *****************/
 
     const contentEN = {
         advanced: 'Advanced',
@@ -253,8 +262,8 @@
     }
 
     /****************
-    *   Interface   *
-    ****************/
+     *   Interface   *
+     ****************/
 
     // Set Auto Go Active
     function setAutoGoActive() {
@@ -292,8 +301,8 @@
         };
 
         var settingsWindow = document.createElement("div");
-            settingsWindow.setAttribute("id", "settingsWindow")
-            settingsWindow.innerHTML = `
+        settingsWindow.setAttribute("id", "settingsWindow")
+        settingsWindow.innerHTML = `
                 <span id="settingsLanguage">
                     <img id="languageEN" src="${assetsUrl}/GB.png">
                     <img id="languagePL" src="${assetsUrl}/PL.png">
@@ -418,10 +427,10 @@
         document.getElementById("header_game").insertBefore(settingsWindow, document.getElementById("header_game").children[0]);
 
         var overlayBack = document.createElement("div");
-            const wrapperHeight = document.getElementById("wrapper_game").clientHeight;
-            overlayBack.setAttribute("id", "overlayBack");
-            overlayBack.setAttribute("style", `height: ${wrapperHeight}px;`);
-            overlayBack.addEventListener ("click", closeSettings);
+        const wrapperHeight = document.getElementById("wrapper_game").clientHeight;
+        overlayBack.setAttribute("id", "overlayBack");
+        overlayBack.setAttribute("style", `height: ${wrapperHeight}px;`);
+        overlayBack.addEventListener ("click", closeSettings);
         document.getElementsByTagName("body")[0].appendChild(overlayBack);
 
         // Set Language
@@ -594,7 +603,7 @@
 
             $('#quests_settings').addClass(doQuests ? 'active' : 'inactive');
             $(`#do_quests_${doQuests}`).addClass('active');
-            
+
             for (const type in questTypes) {
                 if (questTypes[type]) {
                     $(`#do_${type}_quests`).addClass('active');
@@ -635,8 +644,8 @@
     document.getElementById("mainmenu").insertBefore(settingsButton, document.getElementById("mainmenu").children[1]);
 
     /****************
-    *    Helpers    *
-    ****************/
+     *    Helpers    *
+     ****************/
 
     function getRandomInt(min, max) {
         min = Math.ceil(min);
@@ -684,23 +693,47 @@
     };
 
     /****************
-    *    Auto Go    *
-    ****************/
+     *    Auto Go    *
+     ****************/
 
     function autoGo() {
 
         // Variables
 
         const currentTime = new Date().getTime();
-        const clickDelay = getRandomInt(900, 2400);
+        const clickDelay = getRandomInt(1100, 14000);
 
+
+        if (dungeonAttacked){
+            console.log("dungeonDeathCheck");
+
+            localStorage.setItem("dungeonAttacked", JSON.stringify(false));
+            const elementLost = document.querySelector(".reportLose");
+
+            if (elementLost) {
+                console.log("navigating to dungeon page...");
+
+                localStorage.setItem("dungeonLost", JSON.stringify(true));
+                setTimeout(() => {
+                    document.getElementsByClassName("cooldown_bar_link")[1].click();
+                }, getRandomInt(1100, 4000));
+            }
+        }
+
+        if (dungeonLost){
+            console.log("Lost, closing dungeon");
+            localStorage.setItem("dungeonLost", JSON.stringify(false));
+            setTimeout(() => {
+                document.querySelector("input.button1:nth-child(2)").click();
+            }, getRandomInt(1100, 4000));
+        }
         // Claim Daily Reward
 
         if (document.getElementById("blackoutDialogLoginBonus") !== null) {
             setTimeout(function(){
                 document.getElementById("blackoutDialogLoginBonus").getElementsByTagName("input")[0].click();
             }, clickDelay);
-        };
+        }
 
         // Close Notifications
 
@@ -711,10 +744,9 @@
         };
 
         /***************
-        *   Use Food   *
-        ***************/
-
-        if (player.hp < 10) {
+         *   Use Food   *
+         ***************/
+        if (player.hp < 15) {
             console.log("Low health");
 
             var lowHealthAlert = document.createElement("div");
@@ -742,11 +774,67 @@
             showLowHealthAlert();
 
             // @TODO
+            // Select all relevant elements
+            const elements = document.querySelectorAll('.ui-draggable.ui-droppable.ui-draggable-handle');
+
+            // Filter elements to get food items
+            let foodElements = Array.from(elements).filter(el => el.getAttribute("data-content-type") === "64");
+
+            console.log("foodElements");
+
+            // Get the HP bar values
+            const hp_bar = document.querySelector('#header_values_hp_bar');
+            const missing_hp = parseInt(hp_bar.getAttribute("data-max-value")) - parseInt(hp_bar.getAttribute("data-value"));
+
+            // Create an array of pairs: [foodElement, vitalityValue]
+            let foodElementsHealthPairs = [];
+            foodElements.forEach(foodEl => {
+                let nextSibling = foodEl.nextElementSibling;
+
+                if (nextSibling) {
+                    let vitalityValue = parseInt(nextSibling.getAttribute("data-vitality")); // Convert to integer
+                    foodElementsHealthPairs.push([foodEl, vitalityValue]); // Store as pair
+                }
+            });
+
+            // Sort the array based on the second value (vitality)
+            foodElementsHealthPairs.sort((a, b) => a[1] - b[1]);
+
+            console.log(foodElementsHealthPairs);
+
+            console.log("missing_hp "+missing_hp)
+
+            const smallestFood = foodElementsHealthPairs[0][0];
+            var xCoord = parseInt(smallestFood.getAttribute("data-position-x"));
+            var yCoord = parseInt(smallestFood.getAttribute("data-position-y"));
+            var foodSend = {
+                from: 514,
+                fromX: xCoord,
+                fromY: yCoord,
+                to: 8,
+                toX: 1,
+                toY: 1,
+                amount: 1
+            };
+            function moveFood(dataToParam) {
+                const params = new URLSearchParams(dataToParam).toString();
+                const requestUrl = "ajax.php?mod=inventory&submod=move&" + params;
+                const data = "&a=" + new Date().getTime() + "&sh=" + secureHash;
+
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST", requestUrl, false);
+                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+                xhr.send(data);
+            }
+            moveFood(foodSend);
+            //Force a hard reload to clear the cache if supported by the browser
+            location.reload();
+
         }
 
         /****************
-        * Handle Quests *
-        ****************/
+         * Handle Quests *
+         ****************/
 
         else if (doQuests === true && nextQuestTime < currentTime) {
             function completeQuests() {
@@ -783,7 +871,7 @@
                         if (url.includes('8aada67d4c5601e009b9d2a88f478c')) {
                             return 'combat';
                         }
-                        
+
                         if (url.includes('00f1a594723515a77dcd6d66c918fb')) {
                             return 'arena';
                         }
@@ -819,10 +907,10 @@
                         if (questTypes[icon]) {
                             return quest.getElementsByClassName("quest_slot_button_accept")[0].click();
                         };
-                    }           
+                    }
 
                     $("#quest_footer_reroll input").first().click()
-                }  
+                }
 
                 checkNextQuestTime();
             }
@@ -849,8 +937,8 @@
         }
 
         /****************
-        * Go Expedition *
-        ****************/
+         * Go Expedition *
+         ****************/
 
         else if (doExpedition === true && document.getElementById("cooldown_bar_fill_expedition").classList.contains("cooldown_bar_fill_ready") === true) {
             function goExpedition() {
@@ -859,7 +947,7 @@
 
                 if (!inExpeditionPage || inEventExpeditionPage) {
                     document.getElementsByClassName("cooldown_bar_link")[0].click();
-                } else { 
+                } else {
                     document.getElementsByClassName("expedition_button")[monsterId].click();
                 };
             };
@@ -871,8 +959,8 @@
         }
 
         /**************
-        * Go Dungeon  *
-        **************/
+         * Go Dungeon  *
+         **************/
 
         else if (doDungeon === true && document.getElementById("cooldown_bar_fill_dungeon").classList.contains("cooldown_bar_fill_ready") === true) {
             function goDungeon() {
@@ -890,19 +978,20 @@
                             document.getElementById("content").getElementsByClassName("button1")[0].click();
                         }
                     } else {
+
+                        localStorage.setItem("dungeonAttacked", JSON.stringify(true));
                         document.getElementById("content").getElementsByTagName("area")[0].click();
                     };
                 };
             };
-
             setTimeout(function(){
                 goDungeon();
             }, clickDelay);
         }
 
         /************************
-        * Go Arena Provinciarum *
-        ************************/
+         * Go Arena Provinciarum *
+         ************************/
 
         else if (doArena === true && document.getElementById("cooldown_bar_fill_arena").classList.contains("cooldown_bar_fill_ready") === true) {
             function goArena() {
@@ -917,7 +1006,7 @@
 
                     if (!inArenaProvPage) {
                         document.getElementById("mainnav").getElementsByTagName("td")[1].firstElementChild.click();
-                    } else { 
+                    } else {
                         const levels = new Array();
                         levels[0] = Number(document.getElementById("own2").getElementsByTagName("td")[1].firstChild.nodeValue)
                         levels[1] = Number(document.getElementById("own2").getElementsByTagName("td")[5].firstChild.nodeValue)
@@ -934,7 +1023,7 @@
                         } else {
                             opponentIndex = getRandomIntIndex(levels)
                         }
-                
+
                         document.getElementsByClassName("attack")[opponentIndex].click();
                     }
                 }
@@ -947,8 +1036,8 @@
         }
 
         /*************************
-        * Go Circus Provinciarum *
-        *************************/
+         * Go Circus Provinciarum *
+         *************************/
 
         else if (doCircus === true && document.getElementById("cooldown_bar_fill_ct").classList.contains("cooldown_bar_fill_ready") === true) {
             function goCircus() {
@@ -961,7 +1050,7 @@
 
                     if (!inCircusProvPage) {
                         document.getElementById("mainnav").getElementsByTagName("td")[3].firstElementChild.click();
-                    } else { 
+                    } else {
                         const levels = new Array();
                         levels[0] = Number(document.getElementById("own3").getElementsByTagName("td")[1].firstChild.nodeValue)
                         levels[1] = Number(document.getElementById("own3").getElementsByTagName("td")[5].firstChild.nodeValue)
@@ -991,8 +1080,8 @@
         }
 
         /************************
-        *  Go Event Expedition  *
-        ************************/
+         *  Go Event Expedition  *
+         ************************/
 
         else if (doEventExpedition === true && nextEventExpeditionTime < currentTime && eventPoints > 0) {
             function goEventExpedition() {
@@ -1029,7 +1118,7 @@
 
                         document.getElementsByClassName("expedition_button")[eventMonsterId].click();
                     }
-                }                
+                }
             };
 
             setTimeout(function(){
@@ -1039,18 +1128,18 @@
         }
 
         /***********************
-        * Wait for Next Action *
-        ***********************/
+         * Wait for Next Action *
+         ***********************/
 
         else {
 
             /******************
-            *    Fast Mode    *
-            ******************/
+             *    Fast Mode    *
+             ******************/
 
             if (safeMode === false) {
                 const actions = [];
-    
+
                 if (doExpedition === true) {
                     const timeTo = convertTimeToMs(document.getElementById("cooldown_bar_text_expedition").innerText);
 
@@ -1117,7 +1206,7 @@
                 const nextAction = getNextAction(actions);
 
                 // @TODO fix nextAction if !actions.length
-    
+
                 function formatTime(timeInMs) {
                     if (timeInMs < 1000) {
                         return "0:00:00"
@@ -1135,12 +1224,12 @@
                         mins = "0" + mins;
                     };
                     let hrs = (timeInSecs - mins) / 60;
-    
+
                     return hrs + ':' + mins + ':' + secs;
                 };
 
                 var nextActionWindow = document.createElement("div");
-    
+
                 function showNextActionWindow() {
                     nextActionWindow.setAttribute("id", "nextActionWindow")
                     nextActionWindow.setAttribute("style", `
@@ -1169,16 +1258,16 @@
                 showNextActionWindow();
 
                 let nextActionCounter;
-    
+
                 nextActionCounter = setInterval(function() {
                     nextAction.time = nextAction.time - 1000;
-    
+
                     nextActionWindow.innerHTML = `
                         <span style="color: #fff;">${content.nextAction}: </span>
                         <span>${content[nextAction.name]}</span></br>
                         <span style="color: #fff;">${content.in}: </span>
                         <span>${formatTime(nextAction.time)}</span>`;
-    
+
                     if (nextAction.time <= 0) {
                         if (nextAction.index === 4) {
                             document.getElementById("submenu2").getElementsByClassName("menuitem glow")[0].click();
@@ -1193,8 +1282,8 @@
             }
 
             /******************
-            *    Safe Mode    *
-            ******************/
+             *    Safe Mode    *
+             ******************/
 
             else {
                 //TODO
