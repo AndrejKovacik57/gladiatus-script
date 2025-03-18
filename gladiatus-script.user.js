@@ -94,6 +94,16 @@
     if (localStorage.getItem('dungeonLost')) {
         dungeonLost = localStorage.getItem('dungeonLost') === "true" ? true : false;
     };
+    // Clik at character overview
+    let characterOverview = false;
+    if (localStorage.getItem('characterOverview')) {
+        characterOverview = localStorage.getItem('characterOverview') === "true" ? true : false;
+    };
+    // Click at main character
+    let mainCharacter = false;
+    if (localStorage.getItem('mainCharacter')) {
+        mainCharacter = localStorage.getItem('dungeonLost') === "true" ? true : false;
+    };
 
     let doDungeon = true;
     if (localStorage.getItem('doDungeon')) {
@@ -773,9 +783,17 @@
             };
             showLowHealthAlert();
 
-            // @TODO
             // go to overview page
-            document.querySelector("a.menuitem").click();
+            if (!characterOverview){
+                localStorage.setItem("characterOverview", JSON.stringify(true));
+                document.querySelector("a.menuitem").click();
+            }
+            // select main character
+            if (!mainCharacter){
+                localStorage.setItem("mainCharacter", JSON.stringify(true));
+                document.querySelector(".charmercpic.doll1").click();
+            }
+
 
             // Select all relevant elements
             const elements = document.querySelectorAll('.ui-draggable.ui-droppable.ui-draggable-handle');
@@ -831,6 +849,9 @@
             }
             moveFood(foodSend);
             //reload overview page
+
+            localStorage.setItem("characterOverview", JSON.stringify(false));
+            localStorage.setItem("mainCharacter", JSON.stringify(false));
             document.querySelector("a.menuitem").click();
 
         }
