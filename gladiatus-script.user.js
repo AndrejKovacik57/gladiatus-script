@@ -774,6 +774,9 @@
             showLowHealthAlert();
 
             // @TODO
+            // go to overview page
+            document.querySelector("a.menuitem").click();
+
             // Select all relevant elements
             const elements = document.querySelectorAll('.ui-draggable.ui-droppable.ui-draggable-handle');
 
@@ -827,8 +830,8 @@
                 xhr.send(data);
             }
             moveFood(foodSend);
-            //Force a hard reload to clear the cache if supported by the browser
-            location.reload();
+            //reload overview page
+            document.querySelector("a.menuitem").click();
 
         }
 
