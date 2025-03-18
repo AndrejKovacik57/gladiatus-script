@@ -756,7 +756,7 @@
         /***************
          *   Use Food   *
          ***************/
-        if (player.hp < 99) {
+        if (player.hp < 15) {
             console.log("Low health ", player.hp);
 
             var lowHealthAlert = document.createElement("div");
