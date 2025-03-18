@@ -23,12 +23,12 @@
         const globalCSS = GM_getResourceText("customCSS_global");
         GM_addStyle(globalCSS);
     };
-    
+
     addCustomCSS();
 
     /*****************
-    *     Global     *
-    *****************/  
+     *     Global     *
+     *****************/
 
     const assetsUrl = 'https://raw.githubusercontent.com/ebodziony/gladiatus-script/master/assets';
 
@@ -102,7 +102,7 @@
     // Click at main character
     let mainCharacter = false;
     if (localStorage.getItem('mainCharacter')) {
-        mainCharacter = localStorage.getItem('dungeonLost') === "true" ? true : false;
+        mainCharacter = localStorage.getItem('mainCharacter') === "true" ? true : false;
     };
 
     let doDungeon = true;
@@ -756,8 +756,8 @@
         /***************
          *   Use Food   *
          ***************/
-        if (player.hp < 15) {
-            console.log("Low health");
+        if (player.hp < 99) {
+            console.log("Low health ", player.hp);
 
             var lowHealthAlert = document.createElement("div");
 
@@ -782,61 +782,9 @@
                 document.getElementById("header_game").insertBefore(lowHealthAlert, document.getElementById("header_game").children[0]);
             };
             showLowHealthAlert();
+            console.log("characterOverview",characterOverview);
+            console.log("mainCharacter",mainCharacter);
 
-            // go to overview page
-            if (!characterOverview){
-                localStorage.setItem("characterOverview", JSON.stringify(true));
-                document.querySelector("a.menuitem").click();
-            }
-            // select main character
-            if (!mainCharacter){
-                localStorage.setItem("mainCharacter", JSON.stringify(true));
-                document.querySelector(".charmercpic.doll1").click();
-            }
-
-
-            // Select all relevant elements
-            const elements = document.querySelectorAll('.ui-draggable.ui-droppable.ui-draggable-handle');
-
-            // Filter elements to get food items
-            let foodElements = Array.from(elements).filter(el => el.getAttribute("data-content-type") === "64");
-
-            console.log("foodElements");
-
-            // Get the HP bar values
-            const hp_bar = document.querySelector('#header_values_hp_bar');
-            const missing_hp = parseInt(hp_bar.getAttribute("data-max-value")) - parseInt(hp_bar.getAttribute("data-value"));
-
-            // Create an array of pairs: [foodElement, vitalityValue]
-            let foodElementsHealthPairs = [];
-            foodElements.forEach(foodEl => {
-                let nextSibling = foodEl.nextElementSibling;
-
-                if (nextSibling) {
-                    let vitalityValue = parseInt(nextSibling.getAttribute("data-vitality")); // Convert to integer
-                    foodElementsHealthPairs.push([foodEl, vitalityValue]); // Store as pair
-                }
-            });
-
-            // Sort the array based on the second value (vitality)
-            foodElementsHealthPairs.sort((a, b) => a[1] - b[1]);
-
-            console.log(foodElementsHealthPairs);
-
-            console.log("missing_hp "+missing_hp)
-
-            const smallestFood = foodElementsHealthPairs[0][0];
-            var xCoord = parseInt(smallestFood.getAttribute("data-position-x"));
-            var yCoord = parseInt(smallestFood.getAttribute("data-position-y"));
-            var foodSend = {
-                from: 514,
-                fromX: xCoord,
-                fromY: yCoord,
-                to: 8,
-                toX: 1,
-                toY: 1,
-                amount: 1
-            };
             function moveFood(dataToParam) {
                 const params = new URLSearchParams(dataToParam).toString();
                 const requestUrl = "ajax.php?mod=inventory&submod=move&" + params;
@@ -847,12 +795,82 @@
                 xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                 xhr.send(data);
             }
-            moveFood(foodSend);
-            //reload overview page
+            // go to overview page
+            if (!characterOverview){
+                localStorage.setItem("characterOverview", JSON.stringify(true));
+                document.querySelector("a.menuitem").click();
+            }
+            // select main character
+            if (!mainCharacter){
+                localStorage.setItem("mainCharacter", JSON.stringify(true));
+                document.querySelector(".charmercpic.doll1").click();
+            }
+            let hasFood = false;
 
-            localStorage.setItem("characterOverview", JSON.stringify(false));
-            localStorage.setItem("mainCharacter", JSON.stringify(false));
-            document.querySelector("a.menuitem").click();
+            const awesomeTabs = document.querySelectorAll('.awesome-tabs');
+            console.log("awesomeTabs", awesomeTabs);
+            const awesomeTabsFiltered = Array.from(awesomeTabs).filter(el => el.hasAttribute("data-bag-number"));
+            console.log("awesomeTabsFiltered", awesomeTabsFiltered);
+            async function clickWithDelay(elements) {
+                for (const el of elements) {
+                    el.click();
+                    console.log(`Clicked on:`, el);
+                    await new Promise(resolve => setTimeout(resolve, getRandomInt(1100, 2000))); // Random sleep time
+
+                    const draggableElements = document.querySelectorAll('.ui-draggable.ui-droppable.ui-draggable-handle');
+
+                    // Filter elements to get food items
+                    let foodElements = Array.from(draggableElements).filter(el => el.getAttribute("data-content-type") === "64");
+
+                    if (foodElements.length > 0) {
+                        console.log("foodElements found:", foodElements);
+                        const hp_bar = document.querySelector('#header_values_hp_bar');
+                        const missing_hp = parseInt(hp_bar.getAttribute("data-max-value")) - parseInt(hp_bar.getAttribute("data-value"));
+
+                        // Create an array of pairs: [foodElement, vitalityValue]
+                        let foodElementsHealthPairs = [];
+                        foodElements.forEach(foodEl => {
+                            let nextSibling = foodEl.nextElementSibling;
+
+                            if (nextSibling) {
+                                let vitalityValue = parseInt(nextSibling.getAttribute("data-vitality")); // Convert to integer
+                                foodElementsHealthPairs.push([foodEl, vitalityValue]); // Store as pair
+                            }
+                        });
+
+                        // Sort the array based on the second value (vitality)
+                        foodElementsHealthPairs.sort((a, b) => a[1] - b[1]);
+
+                        console.log("foodElementsHealthPairs", foodElementsHealthPairs);
+
+                        console.log("missing_hp "+missing_hp)
+
+                        const smallestFood = foodElementsHealthPairs[0][0];
+                        var xCoord = parseInt(smallestFood.getAttribute("data-position-x"));
+                        var yCoord = parseInt(smallestFood.getAttribute("data-position-y"));
+                        var foodSend = {
+                            from: 514,
+                            fromX: xCoord,
+                            fromY: yCoord,
+                            to: 8,
+                            toX: 1,
+                            toY: 1,
+                            amount: 1
+                        };
+                        console.log("moveFood1");
+                        moveFood(foodSend);
+                        console.log("moveFood2");
+                        //reload overview page
+
+                        localStorage.setItem("characterOverview", JSON.stringify(false));
+                        localStorage.setItem("mainCharacter", JSON.stringify(false));
+                        document.querySelector("a.menuitem").click();
+                        return; // Stop execution of the function
+                    }
+                }
+            }
+
+            clickWithDelay(awesomeTabsFiltered)
 
         }
 
