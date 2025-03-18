@@ -805,7 +805,6 @@
                 localStorage.setItem("mainCharacter", JSON.stringify(true));
                 document.querySelector(".charmercpic.doll1").click();
             }
-            let hasFood = false;
 
             const awesomeTabs = document.querySelectorAll('.awesome-tabs');
             console.log("awesomeTabs", awesomeTabs);
@@ -824,8 +823,6 @@
 
                     if (foodElements.length > 0) {
                         console.log("foodElements found:", foodElements);
-                        const hp_bar = document.querySelector('#header_values_hp_bar');
-                        const missing_hp = parseInt(hp_bar.getAttribute("data-max-value")) - parseInt(hp_bar.getAttribute("data-value"));
 
                         // Create an array of pairs: [foodElement, vitalityValue]
                         let foodElementsHealthPairs = [];
@@ -838,12 +835,8 @@
                             }
                         });
 
-                        // Sort the array based on the second value (vitality)
                         foodElementsHealthPairs.sort((a, b) => a[1] - b[1]);
-
                         console.log("foodElementsHealthPairs", foodElementsHealthPairs);
-
-                        console.log("missing_hp "+missing_hp)
 
                         const smallestFood = foodElementsHealthPairs[0][0];
                         var xCoord = parseInt(smallestFood.getAttribute("data-position-x"));
@@ -857,15 +850,16 @@
                             toY: 1,
                             amount: 1
                         };
-                        console.log("moveFood1");
+                        console.log("moveFood");
                         moveFood(foodSend);
-                        console.log("moveFood2");
-                        //reload overview page
+                        console.log("moveFood after");
 
                         localStorage.setItem("characterOverview", JSON.stringify(false));
                         localStorage.setItem("mainCharacter", JSON.stringify(false));
+
+                        //reload overview page
                         document.querySelector("a.menuitem").click();
-                        return; // Stop execution of the function
+                        return;
                     }
                 }
             }
