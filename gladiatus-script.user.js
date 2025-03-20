@@ -774,51 +774,48 @@
             showLowHealthAlert();
 
 
-            function moveFood(dataToParam) {
-                // Build the query parameters
+            async function moveFood(dataToParam) {
                 const params = new URLSearchParams(dataToParam).toString();
                 const requestUrl = `ajax.php?mod=inventory&submod=move&${params}`;
+                const bodyParams = new URLSearchParams();
+                bodyParams.append("a", new Date().getTime());
+                bodyParams.append("sh", secureHash);
 
-                // Prepare the body data (just like in your original code)
-                const bodyData = `&a=${new Date().getTime()}&sh=${secureHash}`;
-
-                // Use fetch to send an asynchronous request
-                fetch(requestUrl, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/x-www-form-urlencoded",
-                    },
-                    body: bodyData,
-                })
-                    .then((response) => {
-                        if (!response.ok) {
-                            // Handle HTTP errors
-                            throw new Error(`Network response was not OK. Status: ${response.status}`);
-                        }
-                        return response.text(); // or response.json() if the server returns JSON
-                    })
-                    .then((data) => {
-                        // Handle the response data
-                        console.log("Server responded with:", data);
-                        // Do whatever you need with `data`
-                    })
-                    .catch((error) => {
-                        // Handle network or parsing errors
-                        console.error("Fetch error:", error);
+                try {
+                    const response = await fetch(requestUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                        body: bodyParams,
                     });
-            }
 
-            let preview = document.querySelector("a.menuitem");
-            let menuActive = document.querySelector("a.menuitem.active");
-            if (preview != menuActive){
-                preview.click();
+                    if (!response.ok) {
+                        throw new Error(`Network response was not OK. Status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    console.log("Server responded with:", data);
+                    return data;
+                } catch (error) {
+                    console.error("Fetch error:", error);
+                }
             }
-            let mainCharacter = document.querySelector(".charmercsel");
-            let activeCharacter = document.querySelector(".charmercsel.active");
-            // select main character
-            if (mainCharacter != activeCharacter){
-                mainCharacter.click();
+            function clickIfDifferentAndClick(selector, activeSelector) {
+                const el = document.querySelector(selector);
+                const activeEl = document.querySelector(activeSelector);
+
+                if(!activeEl && el || el && activeEl && el !== activeEl){
+                    console.log("not active, clicking");
+                    el.click();
+                }
+                else {
+                    // `el` is already the active element, do nothing
+                    console.log("The target element is already active. No click needed.");
+                }
             }
+            clickIfDifferentAndClick("a.menuitem", "a.menuitem.active");
+            clickIfDifferentAndClick(".charmercsel", ".charmercsel.active");
 
             const awesomeTabs = document.querySelectorAll('.awesome-tabs');
             console.log("awesomeTabs", awesomeTabs);
@@ -829,7 +826,6 @@
                     el.click();
                     console.log(`Clicked on:`, el);
                     await new Promise(resolve => setTimeout(resolve, getRandomInt(1100, 2000))); // Random sleep time
-
                     let bagNumber = parseInt(el.getAttribute("data-bag-number"));
 
                     const draggableElements = document.querySelectorAll('.ui-draggable.ui-droppable.ui-draggable-handle');
@@ -845,13 +841,13 @@
                         foodElements.forEach(foodEl => {
                             let nextSibling = foodEl.nextElementSibling;
 
-                            if (nextSibling) {
-                                let vitalityValue = parseInt(nextSibling.getAttribute("data-vitality")); // Convert to integer
+                            if (nextSibling && nextSibling.hasAttribute("data-vitality")) {
+                                let vitalityValue = parseInt(nextSibling.getAttribute("data-vitality"), 10); // Convert to integer
                                 foodElementsHealthPairs.push([foodEl, vitalityValue]); // Store as pair
                             }
                         });
 
-                        foodElementsHealthPairs.sort((a, b) => a[1] - b[1]);
+                        foodElementsHealthPairs.sort((a, b) => a[1] - b[1]); //small first
                         console.log("foodElementsHealthPairs", foodElementsHealthPairs);
 
                         const smallestFood = foodElementsHealthPairs[0][0];
@@ -869,8 +865,12 @@
                             amount: 1
                         };
                         console.log("moveFood ", foodSend);
-                        let response = moveFood(foodSend);
-                        console.log("moveFood after ", response);
+                        const responseData = await moveFood(foodSend);
+                        if (responseData) {
+                            console.log("moveFood after ", responseData);
+                        } else {
+                            console.log("error while moving food ");
+                        }
 
                         //reload overview page
                         document.querySelector("a.menuitem").click();
