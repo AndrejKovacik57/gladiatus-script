@@ -94,16 +94,6 @@
     if (localStorage.getItem('dungeonLost')) {
         dungeonLost = localStorage.getItem('dungeonLost') === "true" ? true : false;
     };
-    // Clik at character overview
-    let characterOverview = false;
-    if (localStorage.getItem('characterOverview')) {
-        characterOverview = localStorage.getItem('characterOverview') === "true" ? true : false;
-    };
-    // Click at main character
-    let mainCharacter = false;
-    if (localStorage.getItem('mainCharacter')) {
-        mainCharacter = localStorage.getItem('mainCharacter') === "true" ? true : false;
-    };
 
     let doDungeon = true;
     if (localStorage.getItem('doDungeon')) {
@@ -756,7 +746,7 @@
         /***************
          *   Use Food   *
          ***************/
-        if (player.hp < 15) {
+        if (player.hp < 25) {
             console.log("Low health ", player.hp);
 
             var lowHealthAlert = document.createElement("div");
@@ -782,28 +772,52 @@
                 document.getElementById("header_game").insertBefore(lowHealthAlert, document.getElementById("header_game").children[0]);
             };
             showLowHealthAlert();
-            console.log("characterOverview",characterOverview);
-            console.log("mainCharacter",mainCharacter);
+
 
             function moveFood(dataToParam) {
+                // Build the query parameters
                 const params = new URLSearchParams(dataToParam).toString();
-                const requestUrl = "ajax.php?mod=inventory&submod=move&" + params;
-                const data = "&a=" + new Date().getTime() + "&sh=" + secureHash;
+                const requestUrl = `ajax.php?mod=inventory&submod=move&${params}`;
 
-                const xhr = new XMLHttpRequest();
-                xhr.open("POST", requestUrl, false);
-                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.send(data);
+                // Prepare the body data (just like in your original code)
+                const bodyData = `&a=${new Date().getTime()}&sh=${secureHash}`;
+
+                // Use fetch to send an asynchronous request
+                fetch(requestUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: bodyData,
+                })
+                    .then((response) => {
+                        if (!response.ok) {
+                            // Handle HTTP errors
+                            throw new Error(`Network response was not OK. Status: ${response.status}`);
+                        }
+                        return response.text(); // or response.json() if the server returns JSON
+                    })
+                    .then((data) => {
+                        // Handle the response data
+                        console.log("Server responded with:", data);
+                        // Do whatever you need with `data`
+                    })
+                    .catch((error) => {
+                        // Handle network or parsing errors
+                        console.error("Fetch error:", error);
+                    });
             }
-            // go to overview page
-            if (!characterOverview){
-                localStorage.setItem("characterOverview", JSON.stringify(true));
-                document.querySelector("a.menuitem").click();
+
+            let preview = document.querySelector("a.menuitem");
+            let menuActive = document.querySelector("a.menuitem.active");
+            if (preview != menuActive){
+                preview.click();
             }
+            let mainCharacter = document.querySelector(".charmercsel");
+            let activeCharacter = document.querySelector(".charmercsel.active");
             // select main character
-            if (!mainCharacter){
-                localStorage.setItem("mainCharacter", JSON.stringify(true));
-                document.querySelector(".charmercpic.doll1").click();
+            if (mainCharacter != activeCharacter){
+                mainCharacter.click();
             }
 
             const awesomeTabs = document.querySelectorAll('.awesome-tabs');
@@ -815,6 +829,8 @@
                     el.click();
                     console.log(`Clicked on:`, el);
                     await new Promise(resolve => setTimeout(resolve, getRandomInt(1100, 2000))); // Random sleep time
+
+                    let bagNumber = parseInt(el.getAttribute("data-bag-number"));
 
                     const draggableElements = document.querySelectorAll('.ui-draggable.ui-droppable.ui-draggable-handle');
 
@@ -839,23 +855,22 @@
                         console.log("foodElementsHealthPairs", foodElementsHealthPairs);
 
                         const smallestFood = foodElementsHealthPairs[0][0];
+
+                        console.log("smallestFood ", smallestFood);
                         var xCoord = parseInt(smallestFood.getAttribute("data-position-x"));
                         var yCoord = parseInt(smallestFood.getAttribute("data-position-y"));
                         var foodSend = {
-                            from: 514,
+                            from: bagNumber,
                             fromX: xCoord,
                             fromY: yCoord,
-                            to: 8,
+                            to: 8, // player portrait
                             toX: 1,
                             toY: 1,
                             amount: 1
                         };
-                        console.log("moveFood");
-                        moveFood(foodSend);
-                        console.log("moveFood after");
-
-                        localStorage.setItem("characterOverview", JSON.stringify(false));
-                        localStorage.setItem("mainCharacter", JSON.stringify(false));
+                        console.log("moveFood ", foodSend);
+                        let response = moveFood(foodSend);
+                        console.log("moveFood after ", response);
 
                         //reload overview page
                         document.querySelector("a.menuitem").click();
