@@ -160,6 +160,11 @@
             eventPoints = savedEventPoints.count;
         };
     };
+    //monster home
+    let monsterHomeSearch = 2;
+    if (localStorage.getItem('monsterHomeSearch')) {
+        monsterHomeSearch = parseInt(localStorage.getItem('monsterHomeSearch'));
+    }
 
     /*****************
      *  Translations  *
@@ -303,6 +308,13 @@
         var settingsWindow = document.createElement("div");
         settingsWindow.setAttribute("id", "settingsWindow")
         settingsWindow.innerHTML = `
+                 <style>
+
+                .settingsButton2.active {
+                    border: solid 1px #44dc46 !important;
+                }
+            </style>
+
                 <span id="settingsLanguage">
                     <img id="languageEN" src="${assetsUrl}/GB.png">
                     <img id="languagePL" src="${assetsUrl}/PL.png">
@@ -421,6 +433,14 @@
                             <div id="set_event_monster_id_1" class="settingsButton">2</div>
                             <div id="set_event_monster_id_2" class="settingsButton">3</div>
                             <div id="set_event_monster_id_3" class="settingsButton">Boss</div>
+                        </div>
+                    </div>
+                    <div id="monster_home_search_settings" class="settings_box">
+                        <div class="settingsHeaderBig">Monster Home Search</div>
+                        <div class="settingsSubcontent settings_box.active ">
+                            <div id="set_monster_home_search_0" class="settingsButton settingsButton2">1</div>
+                            <div id="set_monster_home_search_1" class="settingsButton settingsButton2">2</div>
+                            <div id="set_monster_home_search_2" class="settingsButton settingsButton2">3</div>
                         </div>
                     </div>
                 </div>`;
@@ -579,6 +599,17 @@
         $("#set_event_monster_id_2").click(function() { setEventMonster('2') });
         $("#set_event_monster_id_3").click(function() { setEventMonster('3') });
 
+
+        function setMonsterHomeSearch(id) {
+            monsterHomeSearch = id;
+            localStorage.setItem('monsterHomeSearch', id);
+            reloadSettings();
+        }
+        $("#set_monster_home_search_0").click(function() { setMonsterHomeSearch(0) });
+        $("#set_monster_home_search_1").click(function() { setMonsterHomeSearch(1) });
+        $("#set_monster_home_search_2").click(function() { setMonsterHomeSearch(2) });
+
+
         function reloadSettings() {
             closeSettings();
             openSettings();
@@ -613,6 +644,8 @@
             $('#event_expedition_settings').addClass(doEventExpedition ? 'active' : 'inactive');
             $(`#do_event_expedition_${doEventExpedition}`).addClass('active');
             $(`#set_event_monster_id_${eventMonsterId}`).addClass('active');
+
+            $(`#set_monster_home_search_${monsterHomeSearch}`).addClass('active');
         };
 
         setActiveButtons();
@@ -704,21 +737,29 @@
         const clickDelay = getRandomInt(1100, 14000);
 
 
-        if (dungeonAttacked){
-            console.log("dungeonDeathCheck");
 
-            localStorage.setItem("dungeonAttacked", JSON.stringify(false));
-            const elementLost = document.querySelector(".reportLose");
-
-            if (elementLost) {
-                console.log("navigating to dungeon page...");
-
-                localStorage.setItem("dungeonLost", JSON.stringify(true));
-                setTimeout(() => {
-                    document.getElementsByClassName("cooldown_bar_link")[1].click();
-                }, getRandomInt(1100, 4000));
-            }
+        const searchMonsterHome = document.getElementById('blackoutDialog');
+        if(searchMonsterHome){
+            const lootButtons = document.querySelectorAll(".loot-button");
+            lootButtons[monsterHomeSearch].click();
         }
+
+
+        //if (dungeonAttacked){
+        //    console.log("dungeonDeathCheck");
+//
+        //   localStorage.setItem("dungeonAttacked", JSON.stringify(false));
+        //   const elementLost = document.querySelector(".reportLose");
+
+        //    if (elementLost) {
+        //         console.log("navigating to dungeon page...");
+
+        //        localStorage.setItem("dungeonLost", JSON.stringify(true));
+        //      setTimeout(() => {
+        //           document.getElementsByClassName("cooldown_bar_link")[1].click();
+        //       }, getRandomInt(1100, 4000));
+        //    }
+        // }
 
         if (dungeonLost){
             console.log("Lost, closing dungeon");
@@ -746,7 +787,7 @@
         /***************
          *   Use Food   *
          ***************/
-        if (player.hp < 25) {
+        if (player.hp < 99) {
             console.log("Low health ", player.hp);
 
             var lowHealthAlert = document.createElement("div");
@@ -773,34 +814,48 @@
             };
             showLowHealthAlert();
 
-
             async function moveFood(dataToParam) {
-                const params = new URLSearchParams(dataToParam).toString();
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+                const params = new URLSearchParams({
+                    ...dataToParam,
+                    sh: secureHash,
+                }).toString();
+
                 const requestUrl = `ajax.php?mod=inventory&submod=move&${params}`;
+
                 const bodyParams = new URLSearchParams();
                 bodyParams.append("a", new Date().getTime());
-                bodyParams.append("sh", secureHash);
 
                 try {
                     const response = await fetch(requestUrl, {
                         method: "POST",
                         headers: {
-                            "Content-Type": "application/x-www-form-urlencoded",
+                            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                            "X-CSRF-Token": csrfToken,
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Origin": "https://s62-en.gladiatus.gameforge.com",
+                            "Referer": `https://s62-en.gladiatus.gameforge.com/game/index.php?mod=overview&sh=${secureHash}`,
                         },
                         body: bodyParams,
+                        credentials: "include",
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`Network response was not OK. Status: ${response.status}`);
+                    const text = await response.text();
+                    console.log("Raw response:", text);
+                    try {
+                        const data = JSON.parse(text);
+                        console.log("Parsed JSON:", data);
+                        return data;
+                    } catch (e) {
+                        console.error("JSON parsing failed", e);
                     }
-
-                    const data = await response.json();
-                    console.log("Server responded with:", data);
-                    return data;
                 } catch (error) {
                     console.error("Fetch error:", error);
                 }
             }
+
+
             function clickIfDifferentAndClick(selector, activeSelector) {
                 const el = document.querySelector(selector);
                 const activeEl = document.querySelector(activeSelector);
@@ -862,7 +917,8 @@
                             to: 8, // player portrait
                             toX: 1,
                             toY: 1,
-                            amount: 1
+                            amount: 1,
+                            doll:1
                         };
                         console.log("moveFood ", foodSend);
                         const responseData = await moveFood(foodSend);
@@ -1029,9 +1085,23 @@
                             document.getElementById("content").getElementsByClassName("button1")[0].click();
                         }
                     } else {
-
+                        console.log('je vladca zatvaram');
+                        //let dungeonRuler = false;
+                        //document.querySelectorAll("div.map_label").forEach(el => {
+                        //    if (el.textContent.trim() === "Vládca") {
+                        //        dungeonRuler = true;
+//
+                        //        console.log('Vládca');
+                        //        setTimeout(() => {
+                        //            document.querySelector("input.button1:nth-child(2)").click();
+                        //        }, getRandomInt(1100, 4000));
+                        //    }
+                        //});
+                        //if(!dungeonRuler){
                         localStorage.setItem("dungeonAttacked", JSON.stringify(true));
                         document.getElementById("content").getElementsByTagName("area")[0].click();
+                        // }
+
                     };
                 };
             };
